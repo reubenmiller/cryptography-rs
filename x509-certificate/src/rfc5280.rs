@@ -69,6 +69,10 @@ impl AlgorithmIdentifier {
         })
     }
 
+    fn encoded_values_without_parameters(&self) -> impl Values + '_ {
+        encode::sequence((self.algorithm.clone().encode(),))
+    }
+
     fn encoded_values(&self, mode: Mode) -> impl Values + '_ {
         // parameters is strictly OPTIONAL, which means we can omit it completely.
         // However, it is common to see this field encoded as NULL and some
@@ -86,11 +90,19 @@ impl AlgorithmIdentifier {
 
 impl Values for AlgorithmIdentifier {
     fn encoded_len(&self, mode: Mode) -> usize {
-        self.encoded_values(mode).encoded_len(mode)
+        if self.parameters.is_some() {
+            self.encoded_values(mode).encoded_len(mode)
+        } else {
+            self.encoded_values_without_parameters().encoded_len(mode)
+        }
     }
 
     fn write_encoded<W: Write>(&self, mode: Mode, target: &mut W) -> Result<(), std::io::Error> {
-        self.encoded_values(mode).write_encoded(mode, target)
+        if self.parameters.is_some() {
+            self.encoded_values(mode).write_encoded(mode, target)
+        } else {
+            self.encoded_values_without_parameters().write_encoded(mode, target)
+        }
     }
 }
 
